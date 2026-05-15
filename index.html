@@ -20,33 +20,24 @@ html,body{height:100%;margin:0;padding:0;font-family:-apple-system,BlinkMacSyste
 .product-item.active .pname{margin-left:-3px}
 .pname{font-size:13px;font-weight:600;color:#222}
 .psub{font-size:11px;color:#999;margin-top:1px}
-.col-grid{width:180px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #e8e8e8}
+.col-grid{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .grid-header{padding:10px 12px;font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #e8e8e8;background:#fafafa;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
 .search-wrap{padding:8px 10px;border-bottom:1px solid #e8e8e8;flex-shrink:0;display:none}
 .search-wrap.visible{display:block}
 .search-input{width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none}
 .search-input:focus{border-color:#111}
 .grid-scroll{overflow-y:auto;flex:1}
-.colors-grid{display:grid;grid-template-columns:repeat(2,1fr)}
+.colors-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr))}
 .color-cell{aspect-ratio:1;cursor:pointer;position:relative;border:2px solid transparent;transition:.12s;overflow:hidden}
-.color-cell img{width:100%;height:100%;object-fit:cover;display:block}
+.color-cell img{width:100%;height:100%;object-fit:cover;display:block;image-rendering:auto}
 .color-cell:hover{border-color:#fff;z-index:2;transform:scale(1.05)}
 .color-cell.selected{border-color:#111;z-index:3}
 .color-cell .clabel{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:9px;padding:3px 4px;line-height:1.2;opacity:0;transition:.15s}
 .color-cell:hover .clabel,.color-cell.selected .clabel{opacity:1}
-.no-results{grid-column:1/-1;padding:20px 10px;text-align:center;color:#ccc;font-size:11px}
-.col-preview{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.preview-top{flex:1;position:relative;overflow:hidden;background:#f0f0f0}
-.preview-img{position:absolute;inset:0}
-.preview-img img{width:100%;height:100%;object-fit:cover;display:block}
-.empty-hint{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#ccc;font-size:12px;text-align:center;padding:16px}
-.preview-bottom{padding:14px;border-top:1px solid #e8e8e8;flex-shrink:0}
-.prev-name{font-size:15px;font-weight:700;color:#111}
-.prev-series{font-size:11px;color:#999;margin-top:3px}
-.brand-badge{display:inline-block;margin-top:8px;padding:3px 8px;background:#111;color:#fff;font-size:10px;border-radius:4px;font-weight:600;letter-spacing:.05em}
-.logo-area{padding:12px 14px;border-top:1px solid #e8e8e8;display:flex;flex-direction:column;gap:2px;flex-shrink:0}
-.logo-text{font-size:10px;color:#aaa}
-.logo-brand{font-size:12px;font-weight:700;color:#333}
+.no-results{grid-column:1/-1;padding:40px;text-align:center;color:#ccc;font-size:13px}
+.selected-bar{height:40px;border-top:1px solid #e8e8e8;display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;background:#fafafa}
+.selected-name{font-size:13px;font-weight:600;color:#111}
+.selected-hint{font-size:12px;color:#bbb}
 .group-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 </style>
 </head>
@@ -81,24 +72,11 @@ html,body{height:100%;margin:0;padding:0;font-family:-apple-system,BlinkMacSyste
         <div class="no-results">Выберите серию слева</div>
       </div>
     </div>
+    <div class="selected-bar">
+      <span class="selected-name" id="selected-name" style="display:none"></span>
+      <span class="selected-hint" id="selected-hint">Нажмите на цвет, чтобы узнать название</span>
+    </div>
   </div>
-
-  <div class="col-preview">
-    <div class="preview-top" id="preview-top">
-      <div class="empty-hint">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        <span>Выберите цвет</span>
-      </div>
-    </div>
-    <div class="preview-bottom" id="preview-bottom" style="display:none">
-      <div class="prev-name" id="prev-name"></div>
-      <div class="prev-series" id="prev-series"></div>
-      <div class="brand-badge">CERESIT CT 77</div>
-    </div>
-    <div class="logo-area">
-      <div class="logo-text">Мозаичная штукатурка</div>
-      <div class="logo-brand">Ceresit CT 77</div>
-    </div>
   </div>
 </div>
 
@@ -153,26 +131,24 @@ function renderGrid(colors) {
     return;
   }
   grid.innerHTML = colors.map((c,ci) => `
-    <div class="color-cell" data-ci="${ci}" data-key="${c.key||''}" onclick="selectColor(this,'${c.name}','${c.img}')">
+    <div class="color-cell" data-ci="${ci}" data-key="${c.key||''}" onclick="selectColor(this,'${c.name}')">
       <img src="${c.img}" alt="${c.name}" loading="lazy">
       <div class="clabel">${c.name}</div>
     </div>
   `).join('');
 }
 
-function selectColor(el, name, img) {
+function selectColor(el, name) {
   document.querySelectorAll('.color-cell').forEach(e => e.classList.remove('selected'));
   el.classList.add('selected');
-  document.getElementById('preview-top').innerHTML = `<div class="preview-img"><img src="${img}" alt="${name}"></div><div class="empty-hint" style="display:none"></div>`;
-  document.getElementById('prev-name').textContent = name;
-  const data = mode==='series' ? PRODUCTS : GROUPS;
-  document.getElementById('prev-series').textContent = activeIdx!==null ? data[activeIdx].name : '';
-  document.getElementById('preview-bottom').style.display='block';
+  document.getElementById('selected-name').textContent = name;
+  document.getElementById('selected-name').style.display = 'inline';
+  document.getElementById('selected-hint').style.display = 'none';
 }
 
 function resetPreview() {
-  document.getElementById('preview-top').innerHTML = '<div class="empty-hint"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Выберите цвет</span></div>';
-  document.getElementById('preview-bottom').style.display='none';
+  document.getElementById('selected-name').style.display = 'none';
+  document.getElementById('selected-hint').style.display = 'inline';
 }
 
 function toggleSearch() {
