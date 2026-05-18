@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="ceresit-cp-page">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ceresit CT 77 — подбор цвета</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#1a1a1a;-webkit-font-smoothing:antialiased}
-.cp-root{max-width:920px;margin:0 auto;padding:20px 16px 28px}
+html.ceresit-cp-page,html.ceresit-cp-page body{margin:0;padding:0;background:#fff;overflow:visible;height:auto;min-height:0}
+.cp-root{box-sizing:border-box;max-width:920px;margin:0 auto;padding:20px 16px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a;-webkit-font-smoothing:antialiased;line-height:1.4}
+.cp-root *,.cp-root *::before,.cp-root *::after{box-sizing:border-box}
+.cp-root button{font:inherit;line-height:inherit}
+.cp-root p,.cp-root h2{margin:0}
 .cp-brand{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#999}
 .cp-hint{margin-top:6px;font-size:13px;color:#666;line-height:1.45}
 .cp-preview-block{display:flex;flex-direction:column;align-items:center;text-align:center;margin:20px 0 24px;padding-bottom:8px;border-bottom:1px solid #eee}
@@ -48,7 +49,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </style>
 </head>
 <body>
-<div class="cp-root">
+<div class="cp-root" id="cp-root">
   <p class="cp-brand">Мозаичная штукатурка · Ceresit CT 77</p>
   <p class="cp-hint" id="cp-hint">Нажмите на образец ниже — здесь появится крупное превью</p>
   <section class="cp-preview-block">
@@ -170,6 +171,7 @@ function applyFilters() {
 
   if (!list.length) {
     grid.innerHTML = '<p class="cp-empty">Ничего не найдено</p>';
+    scheduleHeightSync();
     return;
   }
 
@@ -182,6 +184,24 @@ function applyFilters() {
   grid.querySelectorAll('.cp-cell').forEach(btn => {
     btn.addEventListener('click', () => selectColor(btn.dataset.id));
   });
+
+  scheduleHeightSync();
+}
+
+let syncTimer;
+function syncFrameHeight() {
+  if (window.parent === window) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(function () {
+    const height = Math.ceil(document.documentElement.scrollHeight);
+    window.parent.postMessage({ type: 'ceresit-cp-height', height: height }, '*');
+  }, 40);
+}
+function scheduleHeightSync() {
+  syncFrameHeight();
+  setTimeout(syncFrameHeight, 150);
+  setTimeout(syncFrameHeight, 600);
+  setTimeout(syncFrameHeight, 1500);
 }
 
 function selectColor(id) {
@@ -206,10 +226,23 @@ function selectColor(id) {
   if (hintEl) hintEl.hidden = true;
 }
 
-document.getElementById('cp-search').addEventListener('input', applyFilters);
-renderSchemeTags();
-renderSeriesTags();
-applyFilters();
+(function () {
+  function boot() {
+    if (!document.getElementById('cp-root')) return;
+    document.getElementById('cp-search').addEventListener('input', applyFilters);
+    window.addEventListener('resize', syncFrameHeight);
+    renderSchemeTags();
+    renderSeriesTags();
+    applyFilters();
+    scheduleHeightSync();
+    window.addEventListener('load', scheduleHeightSync);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
 </script>
 </body>
 </html>
